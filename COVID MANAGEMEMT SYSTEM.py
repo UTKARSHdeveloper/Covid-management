@@ -1,183 +1,176 @@
 import mysql.connector
 import matplotlib.pyplot as plt
-ageb=list()
-dateb=list()
+
 def visualizeData():
-    mycursor.execute("select * from patients")
-    for v in mycursor:
-        t_idv, namev, agev, genderv, datev=v
-        ageb.append(agev)
-        dateb.append(datev)
+    mycursor.execute("SELECT age, date FROM patients")
+    ageb = []
+    dateb = []
+    
+    for age, date in mycursor:
+        ageb.append(int(age))  # Convert age to integer
+        dateb.append(date.strftime("%Y-%m-%d"))  # Convert date to string format
+    
     plt.xlabel("AGE OF PATIENTS")
     plt.ylabel("DATE OF BECOMING COVID POSITIVE")
-    plt.bar(ageb,dateb)
+    plt.bar(ageb, dateb)
+    plt.xticks(rotation=45)  # Improve readability
     plt.show()
 
+# Database Connection
+mydb = mysql.connector.connect(host="localhost", user="root", passwd="123456")
+mycursor = mydb.cursor()
 
+# Ensure the database exists
+mycursor.execute("CREATE DATABASE IF NOT EXISTS covid_management")
+mycursor.execute("USE covid_management")
 
-print("************************************************************")
-print("          WELCOME TO COVID MANAGEMENT SYSTEM                ")
-print("************************************************************")
-mydb=mysql.connector.connect(host="localhost",user="root",passwd="123456")
-mycursor=mydb.cursor()
-mycursor.execute("create database if not exists covid_management")
-mycursor.execute("use covid_management")
-mycursor.execute("create table if not exists patients(sno varchar(25) not null,name varchar(25) not null, age varchar(25) not null, GENDER char(1) not null, date date not null)")
-mycursor.execute("create table if not exists login(admin varchar(25) not null,password varchar(25) not null)")
-mycursor.execute("create table if not exists sno(patient varchar(25))")
-#mycursor.execute("insert into login values('utkarsh','1234')")
-mycursor.execute("select * from sno")
-z=0
-for i in mycursor:
-    z=1
-if z==0:
-    mycursor.execute("insert into sno values('0','0')")
-mydb.commit()
-j=0
-mycursor.execute("select * from login")
-for i in mycursor:
-    j=1
-if j==0:
-    mycursor.execute("insert into login values('admin','ut')")
+# Table Creation
+mycursor.execute("""
+    CREATE TABLE IF NOT EXISTS patients (
+        sno INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(25) NOT NULL,
+        age INT NOT NULL,
+        gender CHAR(1) NOT NULL,
+        date DATE NOT NULL
+    )
+""")
+
+mycursor.execute("""
+    CREATE TABLE IF NOT EXISTS login (
+        admin VARCHAR(25) NOT NULL,
+        password VARCHAR(25) NOT NULL
+    )
+""")
+
+# Initialize Login Table
+mycursor.execute("SELECT COUNT(*) FROM login")
+if mycursor.fetchone()[0] == 0:
+    mycursor.execute("INSERT INTO login (admin, password) VALUES (%s, %s)", ('admin', 'ut'))
     mydb.commit()
-loop1='y'
-while(loop1=='y') or (loop1=='Y'):
+
+while True:
     print("_____________")
-    print("1.Admin")
-    print("2.Patient")
-    print("3.Exit")
+    print("1. Admin")
+    print("2. Patient")
+    print("3. Exit")
     print("_____________")
-    ch1=int(input("Enter your choice"))
-    if(ch1==1):
-        pas=input("Enter your password")
-        mycursor.execute("select * from login")
-        for i in mycursor:
-            username,password=i
-        if (pas==password):
-            loop2='n'
-            while (loop2=='n') or (loop2=='N'):
+    
+    try:
+        ch1 = int(input("Enter your choice: "))
+    except ValueError:
+        print("Invalid input. Please enter a number.")
+        continue
+
+    if ch1 == 1:
+        pas = input("Enter your password: ")
+        mycursor.execute("SELECT password FROM login")
+        stored_password = mycursor.fetchone()
+        
+        if stored_password and pas == stored_password[0]:
+            while True:
                 print("_________________________")
-                print("1.Add  patients")
-                print("2.Display patients records")
-                print("3.change password")
-                print("4.Remove patients")
-                print("5.Visualize patient data on age vs date of covid positive")
-                print("6.Log out")
-                print("___________________________")
-                ch2=int(input("enter your choice:"))
-                if(ch2==1):
-                    loop3='y'
-                    while (loop3=='y') or (loop3=='Y'):
-                        name=input("Enter patient name")
-                        age=input("Enter patient age")
-                        gender=input("Enter patient gender")
-                        date=input("Enter date of becoming covid positive")
-                        mycursor.execute("select* from sno")
-                        for i in mycursor:
-                            patient,staff=i
-                            patient=int(patient)+1
-                        mycursor.execute("insert into patients values('"+str(patient)+"','"+name+"','"+age+"','"+gender+"','"+date+"')")
-                        mycursor.execute("update sno set patient='"+str(patient)+"'")
-                        mydb.commit()
-                        print("Data of patient has been saved successfully.....")
-                        mycursor.execute("select * from patients")
-                        t=0
-                        for i in mycursor:
-                            t+=1
-                            t_id1,name1,age1,gender1,date1=i
-                        print(f"Total number of corona infected patients--> {patient}")
-                        print(f"Active corona cases--> {t}")
-                        print(f"This patient with id {t_id1} will be quarantine upto 14 days from {date1}")
-                        loop3=input("Due you want to enter more patients(y/n):")
-                    loop2=input("Do you want to logout (y/n):")
-                elif(ch2==2):
-                    idd=input("Enter patient ID:")
-                    t_id2,name2,age2,gender2,date2=["","","","",""]
-                    mycursor.execute("select * from patients where sno='"+idd+"'")
-                    for i in mycursor:
-                        t_id2,name2,age2,gender2,date2=i
-                    print("|  ID  |  NAME  |  AGE  |  GENDER  |  COVID-19 POSITIVE DATE  |")
-                    print(f"|  {t_id2}  |  {name2}  |  {age2}  |  {gender2}  |  {date2}  |")
-                elif(ch2==3):
-                    pas=input("Enter old password:")
-                    mycursor.execute("select * from login")
-                    for i in mycursor:
-                        username,password=i
-                    if(pas==password):
-                        npas=input("Enter new password")
-                        mycursor.execute("update login set password='"+npas+"'")
-                        mydb.commit()
+                print("1. Add Patients")
+                print("2. Display Patient Record")
+                print("3. Change Password")
+                print("4. Remove Patient")
+                print("5. Visualize Patient Data (Age vs Date)")
+                print("6. Log out")
+                print("_________________________")
+                
+                try:
+                    ch2 = int(input("Enter your choice: "))
+                except ValueError:
+                    print("Invalid input. Please enter a number.")
+                    continue
+
+                if ch2 == 1:
+                    name = input("Enter patient name: ")
+                    age = input("Enter patient age: ")
+                    gender = input("Enter patient gender (M/F): ")
+                    date = input("Enter date of becoming COVID positive (YYYY-MM-DD): ")
+
+                    mycursor.execute("INSERT INTO patients (name, age, gender, date) VALUES (%s, %s, %s, %s)",
+                                     (name, age, gender, date))
+                    mydb.commit()
+                    print("Patient record saved successfully.")
+
+                elif ch2 == 2:
+                    idd = input("Enter patient ID: ")
+                    mycursor.execute("SELECT * FROM patients WHERE sno = %s", (idd,))
+                    patient = mycursor.fetchone()
+                    
+                    if patient:
+                        print("| ID | Name | Age | Gender | COVID-19 Positive Date |")
+                        print(f"| {patient[0]} | {patient[1]} | {patient[2]} | {patient[3]} | {patient[4]} |")
                     else:
-                        print("You have entered a wrong password")
-                elif(ch2==4):
-                    loop3='y'
-                    while(loop3=='y') or (loop3=='Y'):
-                        idd=input("Enter patient ID:")
-                        mycursor.execute("delete from patients where sno='"+idd+"'")
+                        print("Patient not found.")
+
+                elif ch2 == 3:
+                    old_pass = input("Enter old password: ")
+                    mycursor.execute("SELECT password FROM login")
+                    stored_password = mycursor.fetchone()
+
+                    if stored_password and old_pass == stored_password[0]:
+                        new_pass = input("Enter new password: ")
+                        mycursor.execute("UPDATE login SET password = %s", (new_pass,))
                         mydb.commit()
-                        print("Patient has been successfully removed......")
-                        loop3=input("Do you want to remove more patient(y/n):")
-                elif(ch2==5):
+                        print("Password updated successfully.")
+                    else:
+                        print("Incorrect password.")
+
+                elif ch2 == 4:
+                    idd = input("Enter patient ID: ")
+                    mycursor.execute("DELETE FROM patients WHERE sno = %s", (idd,))
+                    mydb.commit()
+                    print("Patient record removed successfully.")
+
+                elif ch2 == 5:
                     visualizeData()
-                elif(ch2==6):
-                    break
-    elif(ch1==2):
-        print("Thankyou for coming forward for your test.....")
-        icough=input("Are you feeling cough (y/n):").lower()
-        dry_cough='n'
-        cough='n'
-        if (icough=='y') or (icough=='Y'):
-            dry_cough=input("Are you feeling dry cough (y/n):").lower()
-            cough=input("Are you having normal cough (y/n):").lower()
-        sneeze=input("Are you feeling sneeze (y/n):").lower()
-        pain=input("Are you feeling pain in your body (y/n):").lower()
-        weakness=input("Are you feeling weakness (y/n):").lower()
-        mucus=input("Are you feeling any mucus (y/n):").lower()
-        itemp=int(input("Enter your body temperature: "))
-        if(itemp<=100):
-            temp='low'
-        else:
-            temp='high'
-        breath=input("Are you having any breathing difficulty (y/n) : ")
-        if (dry_cough=='y' and sneeze=='y' and pain=='y' and weakness=='y' and mucus=='y' and temp=='high' and breath=='y'):
-            print("Sorry to say but according to us you are corona positive....")
-            name=input("Enter your name: ")
-            age=input("Enter your age: ")
-            gender=input("Enter your gender(m/f): ")
 
-            mycursor.execute("select * from sno")
-            for i in mycursor:
-                patient,staff=i
-                patient=int(patient)+1
-            mycursor.execute("insert into patients values('"+str(patient)+"','"+name+"','"+age+"','"+gender+"',now())")
-            mycursor.execute("update sno set patient='"+str(patient)+"'")
-            mydb.commit()
-            print("Patient data has been saved successfully....")
-            print(f"Total no. of corona infected persons ----> {patient}")
-            mycursor.execute("select * from patients")
-            t=0
-            for i in mycursor:
-                t+=1
-            print(f"Active corona cases--> {t}")
-            mycursor.execute("select * from patients")
-            for i in mycursor:
-                t_id5,name5,age5,gender5,date5=i
-            print(f"Patient with id {t_id5} will be quarantine for 14 days from {date5}")
+                elif ch2 == 6:
+                    break  # Logout
+                
+                else:
+                    print("Invalid choice.")
 
-        elif (dry_cough=='y' and sneeze=='y' and pain=='n' and weakness=='n' and mucus=='n' and temp=='low' and breath=='n'):
-            print("Nothing to worry it is just due to Air pollution..")
-        elif (dry_cough=='y' and sneeze=='y' and pain=='n' and weakness=='n' and mucus=='y' and temp=='low' and breath=='n'):
-            print("nothing to worry it is just a common cold....")
         else:
-            print("You are not corona positive, if you are feeling something wrong, you just need some rest..  ")
-            print("Also you can consult to a doctor")
-    elif(ch1==3):
+            print("Incorrect password.")
+
+    elif ch1 == 2:
+        print("Thank you for coming forward for your test.")
+        icough = input("Are you feeling cough (y/n): ").lower()
+        dry_cough, cough = 'n', 'n'
+
+        if icough == 'y':
+            dry_cough = input("Are you feeling dry cough (y/n): ").lower()
+            cough = input("Are you having normal cough (y/n): ").lower()
+
+        sneeze = input("Are you feeling sneeze (y/n): ").lower()
+        pain = input("Are you feeling pain in your body (y/n): ").lower()
+        weakness = input("Are you feeling weakness (y/n): ").lower()
+        mucus = input("Are you feeling any mucus (y/n): ").lower()
+
+        try:
+            itemp = int(input("Enter your body temperature: "))
+        except ValueError:
+            print("Invalid temperature input.")
+            continue
+
+        temp = 'high' if itemp > 100 else 'low'
+        breath = input("Are you having any breathing difficulty (y/n): ").lower()
+
+        if dry_cough == 'y' and sneeze == 'y' and pain == 'y' and weakness == 'y' and mucus == 'y' and temp == 'high' and breath == 'y':
+            print("You are likely COVID positive. Please get tested at the nearest health center.")
+        elif dry_cough == 'y' and sneeze == 'y' and pain == 'n' and weakness == 'n' and mucus == 'n' and temp == 'low' and breath == 'n':
+            print("Likely due to air pollution.")
+        elif dry_cough == 'y' and sneeze == 'y' and mucus == 'y' and temp == 'low' and breath == 'n':
+            print("It seems like a common cold.")
+        else:
+            print("You are not COVID positive. If you feel unwell, please consult a doctor.")
+
+    elif ch1 == 3:
+        print("Exiting system. Stay safe!")
         break
 
-
-
-
-
-
-
-
+    else:
+        print("Invalid choice. Please enter 1, 2, or 3.")
